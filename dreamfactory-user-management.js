@@ -3,7 +3,7 @@
 
 angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
     .constant('MODUSRMNGR_ROUTER_PATH', '/user-management')
-    .constant('MODUSRMNGR_ASSET_PATH', 'admin_components/dreamfactory-user-management/')
+    .constant('MODUSRMNGR_ASSET_PATH', 'bower_components/dreamfactory-user-management/')
     .config(['$routeProvider', 'MODUSRMNGR_ROUTER_PATH', 'MODUSRMNGR_ASSET_PATH',
         function ($routeProvider, MODUSRMNGR_ROUTER_PATH, MODUSRMNGR_ASSET_PATH) {
 
