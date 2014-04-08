@@ -3,7 +3,7 @@
 
 angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
     .constant('MODUSRMNGR_ROUTER_PATH', '/user-management')
-    .constant('MODUSRMNGR_ASSET_PATH', 'admin_components/dreamfactory-user-management/')
+    .constant('MODUSRMNGR_ASSET_PATH', 'bower_components/dreamfactory-user-management/')
     .config(['$routeProvider', 'MODUSRMNGR_ROUTER_PATH', 'MODUSRMNGR_ASSET_PATH',
         function ($routeProvider, MODUSRMNGR_ROUTER_PATH, MODUSRMNGR_ASSET_PATH) {
 
@@ -142,7 +142,7 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                                 $cookieStore.remove('CurrentUserObj');
                                 UserDataService.unsetCurrentUser();
                                 $http.defaults.headers.common['X-DreamFactory-Session-Token'] = '';
-                                scope.$emit(scope.es.logoutSuccess);
+                                scope.$emit(scope.es.logoutSuccess, false);
                             },
                             function (reject) {
                                 throw {
