@@ -142,7 +142,7 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                                 $cookieStore.remove('CurrentUserObj');
                                 UserDataService.unsetCurrentUser();
                                 $http.defaults.headers.common['X-DreamFactory-Session-Token'] = '';
-                                scope.$emit(scope.es.logoutSuccess);
+                                scope.$emit(scope.es.logoutSuccess, false);
                             },
                             function (reject) {
                                 throw {
