@@ -11,14 +11,15 @@ While your more that welcome to download and include the module yourself we find
 
 ### Usage
 
-We've written a great three part tutorial on how to use this module.  Part one, which covers basic usage, is located at the [DreamFactory Blog] (http://blog.dreamfactory.com/the-authenticated-app-with-angularjs-dreamfactory-user-management-module)
-
+We've written a great three part tutorial on how to use this module.  Part one, which covers basic usage, is located at the [DreamFactory Blog] (http://blog.dreamfactory.com/the-authenticated-app-with-angularjs-dreamfactory-user-management-module) 
 
 
 
 ### Module Provided Services
 
-The DreamFactory User Management module provides a service for injecting module events and a service for accessing user data.  They are respectively named UserEventsService and UserDataService.
+
+The DreamFactory User Management module provides a service for injecting module events and a service for accessing user data.  They are respectively named UserEventsService and UserDataService.  
+
 
 ##### UserEventsService
 
