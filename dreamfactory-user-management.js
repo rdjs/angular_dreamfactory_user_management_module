@@ -87,6 +87,9 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                         scope._loginRequest(credsDataObj).then(
                             function (result) {
 
+                                delete result.data.no_group_apps;
+                                delete result.data.app_groups;
+
                                 scope._setCookies(result.data);
                                 $http.defaults.headers.common['X-DreamFactory-Session-Token'] = $cookies.PHPSESSID;
                                 UserDataService.setCurrentUser(result.data);

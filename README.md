@@ -15,11 +15,20 @@ We've written a great three part tutorial on how to use this module.  Part one, 
 
 
 
+<<<<<<< HEAD
 
 ### Module Provided Services
 
 The DreamFactory User Management module provides a service for injecting module events and a service for accessing user data.  They are respectively named UserEventsService and UserDataService.  
 
+=======
+### Module Provided Services
+
+
+The DreamFactory User Management module provides a service for injecting module events and a service for accessing user data.  They are respectively named UserEventsService and UserDataService.  
+
+
+>>>>>>> release/1.0.2
 ##### UserEventsService
 
 Inject this service to access module events.  The service returns an object of namespaced the events and is defined below.
