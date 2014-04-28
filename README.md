@@ -14,12 +14,15 @@ While your more that welcome to download and include the module yourself we find
 We've written a great three part tutorial on how to use this module.  Part one, which covers basic usage, is located at the [DreamFactory Blog] (http://blog.dreamfactory.com/the-authenticated-app-with-angularjs-dreamfactory-user-management-module) 
 
 
+### Module Provided Services
+
+The DreamFactory User Management module provides a service for injecting module events and a service for accessing user data.  They are respectively named UserEventsService and UserDataService.  
+
 
 ### Module Provided Services
 
 
 The DreamFactory User Management module provides a service for injecting module events and a service for accessing user data.  They are respectively named UserEventsService and UserDataService.  
-
 
 ##### UserEventsService
 
@@ -107,3 +110,29 @@ Inject this service to access a stored user.  The service contains the current u
     }]);
 ```
 
+#### Options for directives
+
+The DreamFactory login and register directives have an optional 'options' attribute.  Here you can pass an options
+object to configure the directive.  Your options object should resemble:
+
+```javascript
+{
+
+property: value
+
+}
+```
+
+The options for each directive are listed below:
+
+##### Login Directive Options
+
+* showTemplate: boolean
+
+##### Register Directive Options
+
+* showTemplate: boolean
+* confirmationRequired: email_service_id(this can be retrieved from the system config)
+
+Generally, you don't have to specify the confirmationRequired attribute.  The directive will seek this information for the system
+by itself.  However, if you want to specify it for flexibility in testing it you can.
