@@ -16,16 +16,20 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                     templateUrl: MODUSRMNGR_ASSET_PATH + 'views/main.html'
                 });
         }])
-    .run(['$cookieStore', 'UserDataService', function ($cookieStore, UserDataService) {
+    .run(['$cookieStore', '$http', 'UserDataService', function ($cookieStore, $http, UserDataService) {
 
         // Let us know what the module is up to
         //console.log('RUN BLOCK: Check for and set current user');
 
+        var cookie = $cookieStore.get('CurrentUserObj')
+
         // Check if there is a CurrentUserObj in the cookie
-        if ($cookieStore.get('CurrentUserObj')) {
+        if (cookie) {
 
             // There is so store it for a sec
             UserDataService.setCurrentUser($cookieStore.get('CurrentUserObj'));
+
+            $http.defaults.headers.common['X-DreamFactory-Session-Token'] = cookie.session_id;
 
         }
     }])
