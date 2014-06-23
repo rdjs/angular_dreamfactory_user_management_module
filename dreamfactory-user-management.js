@@ -1,7 +1,7 @@
 'use strict';
 
 // Module definition and dependencies
-angular.module('dfUserManagement', ['ngRoute', 'ngCookies', 'dfUtility'])
+angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
 
     // Set constants for path resolution.
     .constant('MODUSRMNGR_ROUTER_PATH', '/user-management')
