@@ -1,7 +1,7 @@
 'use strict';
 
 // Module definition and dependencies
-angular.module('dfUserManagement', ['ngRoute', 'ngCookies', 'dfUtility'])
+angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
 
     // Set constants for path resolution.
     .constant('MODUSRMNGR_ROUTER_PATH', '/user-management')
@@ -877,6 +877,43 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies', 'dfUtility'])
                 }
 
                 return false;
+            }
+        }
+
+    }])
+    .service('dfObjectService', [function () {
+
+        return {
+
+            self: this,
+
+            mergeObjects: function (obj1, obj2) {
+
+                for (var key in obj1) {
+                    obj2[key] = obj1[key]
+                }
+
+                return obj2;
+            },
+
+            deepMergeObjects: function (obj1, obj2) {
+
+                var self = this;
+
+                for (var _key in obj1) {
+                    if (obj2.hasOwnProperty(_key)) {
+                        if(typeof obj2[_key] === 'object') {
+
+                            obj2[_key] = self.deepMergeObjects(obj1[_key], obj2[_key]);
+
+                        }else {
+                            obj2[_key] = obj1[_key];
+                        }
+                    }
+                }
+
+                return obj2;
+
             }
         }
 
