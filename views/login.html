@@ -1,20 +1,32 @@
 <div data-ng-if="showTemplate">
-    <h1>Login</h1>
-
     <div class="row">
         <div class="col-sm-6 col-sm-offset-3">
-            <form name="login-form" data-ng-submit="login(creds)">
-                <div class="form-group">
-                    <input type="email" id="email" name="email" placeholder="Enter Email"
-                           data-ng-model="creds.email" class="form-control" required>
-                </div>
-                <div class="form-group">
-                    <input type="password" id="password" name="password" placeholder="Enter Password"
-                           data-ng-model="creds.password" class="form-control" required>
-                </div>
-                <!-- <input type="submit" value="submit"> -->
-                <input class="button" id="submit-login" type="submit" value="Login">
-            </form>
+
+            <!-- Login Section -->
+            <div data-ng-if="loginActive">
+                <!-- Page title -->
+                <h1>Login</h1>
+
+                <!-- Login Form -->
+                <form name="login-form" data-ng-submit="login(creds)" >
+                    <div class="form-group">
+                        <input type="email" id="email" name="email" placeholder="Enter Email"
+                               data-ng-model="creds.email" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <input type="password" id="password" name="password" placeholder="Enter Password"
+                               data-ng-model="creds.password" class="form-control" required>
+                    </div>
+                    <!-- <input type="submit" value="submit"> -->
+                    <input class="btn btn-default" id="submit-login" type="submit" value="Login">
+                    <button class="btn btn-default pull-right" id="forgot-password-active" type="button"
+                            data-ng-click="showForgotPassword()">Forgot Password</button>
+                </form>
+            </div>
+            <!-- End Login Section -->
+
+            <dreamfactory-forgot-pword-email data-ng-if="!loginActive"></dreamfactory-forgot-pword-email>
+
         </div>
     </div>
 </div>
