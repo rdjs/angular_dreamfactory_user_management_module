@@ -729,13 +729,15 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                         // If we don't have a confirmationRequiredProperty set
                         if (!newValue.hasOwnProperty('confirmationRequired')) {
 
-                            // We go askthe server to get it.  Everything stops until this guy returns.
+                            // We go ask the server to get it.  Everything stops until this guy returns.
                             // SYNCHRONOUS
                             //scope.options.confirmationRequired = xhrHelper.getSystemConfigFromServer().allow_open_registration;
 
-                            scope.options.confirmationRequired = dfXHRHelper.get({
+                            var config = dfXHRHelper.get({
                                 url: 'system/config'
                             });
+
+                            scope.options.confirmationRequired = config.allow_open_registration && config.open_reg_email_service_id ? true : null;
 
                         }
 
@@ -877,6 +879,43 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                 }
 
                 return false;
+            }
+        }
+
+    }])
+    .service('dfObjectService', [function () {
+
+        return {
+
+            self: this,
+
+            mergeObjects: function (obj1, obj2) {
+
+                for (var key in obj1) {
+                    obj2[key] = obj1[key]
+                }
+
+                return obj2;
+            },
+
+            deepMergeObjects: function (obj1, obj2) {
+
+                var self = this;
+
+                for (var _key in obj1) {
+                    if (obj2.hasOwnProperty(_key)) {
+                        if(typeof obj2[_key] === 'object') {
+
+                            obj2[_key] = self.deepMergeObjects(obj1[_key], obj2[_key]);
+
+                        }else {
+                            obj2[_key] = obj1[_key];
+                        }
+                    }
+                }
+
+                return obj2;
+
             }
         }
 
@@ -1044,4 +1083,4 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
             }
         }
 
-}]);
+    }]);
