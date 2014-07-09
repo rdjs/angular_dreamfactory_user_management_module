@@ -729,13 +729,15 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                         // If we don't have a confirmationRequiredProperty set
                         if (!newValue.hasOwnProperty('confirmationRequired')) {
 
-                            // We go askthe server to get it.  Everything stops until this guy returns.
+                            // We go ask the server to get it.  Everything stops until this guy returns.
                             // SYNCHRONOUS
                             //scope.options.confirmationRequired = xhrHelper.getSystemConfigFromServer().allow_open_registration;
 
-                            scope.options.confirmationRequired = dfXHRHelper.get({
+                            var config = dfXHRHelper.get({
                                 url: 'system/config'
                             });
+
+                            scope.options.confirmationRequired = config.allow_open_registration && config.open_reg_email_service_id ? true : null;
 
                         }
 
@@ -1081,4 +1083,4 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
             }
         }
 
-}]);
+    }]);
