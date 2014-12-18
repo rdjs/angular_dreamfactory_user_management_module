@@ -34,6 +34,7 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
 
         }
     }])
+
     // Part of the DreamFactory Angular module definition.  We don't use this yet.
     // Future versions will also include directives/templates for editing current user profile
     // and password stuff to complete the module.
@@ -57,8 +58,8 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
 
     // Directive for Login.  This is does our login work and provides the attachment point for
     // the login portion of our module.
-    .directive('dreamfactoryUserLogin', ['MODUSRMNGR_ASSET_PATH', 'DSP_URL', '$http', '$cookies', '$cookieStore', 'UserEventsService', 'UserDataService', 'dfObjectService',
-        function (MODUSRMNGR_ASSET_PATH, DSP_URL, $http, $cookies, $cookieStore, UserEventsService, UserDataService, dfObjectService) {
+    .directive('dreamfactoryUserLogin', ['MODUSRMNGR_ASSET_PATH', 'DSP_URL', '$http', '$cookies', '$cookieStore', 'UserEventsService', 'UserDataService', '_dfObjectService',
+        function (MODUSRMNGR_ASSET_PATH, DSP_URL, $http, $cookies, $cookieStore, UserEventsService, UserDataService, _dfObjectService) {
 
             return {
 
@@ -72,7 +73,8 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                 scope: {
 
                     // define optional options attribute
-                    options: '=?'
+                    options: '=?',
+                    inErrorMsg: '=?'
                 },
 
                 // template path
@@ -80,7 +82,6 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
 
                 // link it up
                 link: function (scope, elem, attrs) {
-
 
                     // CREATE SHORT NAMES
                     scope.es = UserEventsService.login;
@@ -91,7 +92,7 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
 
                     var defaults = {showTemplate: true};
 
-                    scope.options = dfObjectService.mergeObjects(scope.options, defaults);
+                    scope.options = _dfObjectService.mergeObjects(scope.options, defaults);
 
                     // This is included on the top level tag of our directive template and
                     // controls whether the template is rendered or not.
@@ -107,8 +108,33 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                     // or not we should run the complex implementation.  Things like using a confirm
                     // function to decide whether a record should be deleted or not go here.
 
+                    // User Creds Obj
+                    scope.creds = {
+                        email: '',
+                        password: ''
+                    }
+
+                    scope.errorMsg = scope.inErrorMsg || '';
+                    scope.successMsg = '';
+                    scope.loginWaiting = false;
+
+                    scope.loginForm = {};
+
                     // This is the function we call in the UI for login.
                     scope.login = function (credsDataObj) {
+
+                        // check if the user has entered creds or if
+                        // they were supplied through a browser mechanism
+                        if (credsDataObj.email === '' || credsDataObj.password === '') {
+
+
+                            // They were either supplied by a browser mechanism or
+                            // they weren't entered.  We use jQuery to grab the vals
+                            // If they are still empty the error handler will take care of
+                            // it for us.
+                            credsDataObj.email = $('#df-login-email').val();
+                            credsDataObj.password = $('#df-login-password').val();
+                        }
 
                         // This calls our complex implementation of login()
                         scope._login(credsDataObj);
@@ -122,6 +148,16 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                         scope._toggleForms();
                     };
 
+                    // I was lazy.  These two dismiss errors don't
+                    // follow the module pattern.
+                    // Public functions setting values directly
+                    scope.dismissError = function () {
+                        scope.errorMsg = '';
+                    }
+
+                    scope.dismissSuccess = function () {
+                        scope.successMsg = '';
+                    }
 
                     // PRIVATE API
                     // The private api section contains functions that do most of our heavy lifting
@@ -179,6 +215,9 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                     // Run login implementation
                     scope._login = function (credsDataObj) {
 
+                        // fire up waiting directive
+                        scope.loginWaiting = true;
+
                         // call private login request function with a credentials object
                         scope._loginRequest(credsDataObj).then(
 
@@ -188,9 +227,8 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                                 // remove unnecessary apps data
                                 // this is temporary and cleans up our
                                 // session obj that is returned by the login function
-                                // this data will be removed from the session object in
-                                // DSP v2 so if you use it for anything currently
-                                // beware and use at your own risk
+                                // If a user has a large number of apps it can overflow our cookie
+                                // So we're not going to store this info
                                 delete result.data.no_group_apps;
                                 delete result.data.app_groups;
 
@@ -210,13 +248,28 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                             // Error method
                             function (reject) {
 
+
+                                // Handle Login error with template error message
+                                scope.errorMsg = reject.data.error[0].message;
+                                scope.$emit(scope.es.loginError, reject);
+
+                                // Emit error message so we can hook in
+//                                scope.$emit(scope.es.loginError, reject);
+
+
                                 // Throw a DreamFactory error object
-                                throw {
-                                    module: 'DreamFactory User Management',
-                                    type: 'error',
-                                    provider: 'dreamfactory',
-                                    exception: reject
-                                }
+//                                throw {
+//                                    module: 'DreamFactory User Management',
+//                                    type: 'error',
+//                                    provider: 'dreamfactory',
+//                                    exception: reject
+//                                }
+
+                            }
+                        ).finally(
+                            function () {
+                                // shutdown waiting directive
+                                scope.loginWaiting = false;
                             }
                         )
                     };
@@ -229,6 +282,14 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
 
                     // WATCHERS AND INIT
                     // We define any watchers or init code that needs to be run here.
+                    var watchOptions = scope.$watch('options', function (newValue, oldValue) {
+
+                        if (!newValue) return;
+
+                        if (newValue.hasOwnProperty('showTemplate')) {
+                            scope.showTemplate = newValue.showTemplate;
+                        }
+                    }, true);
 
                     // HANDLE MESSAGES
                     // We handle messages passed to our directive here.  Most commonly this will
@@ -247,7 +308,7 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
         }])
 
     // Forgot Password Email Confirmation
-    .directive('dreamfactoryForgotPwordEmail', ['MODUSRMNGR_ASSET_PATH', 'DSP_URL', '$http', 'UserEventsService', function (MODUSRMNGR_ASSET_PATH, DSP_URL, $http, UserEventsService) {
+    .directive('dreamfactoryForgotPwordEmail', ['MODUSRMNGR_ASSET_PATH', 'DSP_URL', '$http', '_dfStringService', 'UserEventsService', function (MODUSRMNGR_ASSET_PATH, DSP_URL, $http, _dfStringService, UserEventsService) {
 
 
         return {
@@ -261,11 +322,62 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                 // CREATE SHORT NAMES
                 scope.es = UserEventsService.password;
 
+
+                scope.emailForm = true;
+                scope.securityQuestionForm = false;
+
+                scope.sq = {
+                    email: null,
+                    security_question: null,
+                    security_answer: null,
+                    new_password: null,
+                    verify_password: null
+                }
+
+                scope.identical = true;
+                scope.requestWaiting = false;
+                scope.questionWaiting = false;
+
+
                 // PUBLIC API
+
+                // I was lazy.  These two dismiss errors don't
+                // follow the module pattern.
+                // Public functions setting values directly
+                scope.dismissError = function () {
+                    scope.errorMsg = '';
+                }
+
+                scope.dismissSuccess = function () {
+                    scope.successMsg = '';
+                }
+
+
                 scope.requestPasswordReset = function (emailDataObj) {
 
                     // Pass email address in object to the _requestPasswordReset function
                     scope._requestPasswordReset(emailDataObj);
+                };
+
+                scope.securityQuestionSubmit = function (reset) {
+
+                    if (!scope.identical) {
+                        scope.errorMsg = 'Passwords do not match.'
+                        return;
+                    }
+
+                    if (!scope._verifyPasswordLength(reset)) {
+                        scope.errorMsg = 'Password must be at least 5 characters.'
+                        return;
+                    }
+
+
+                    scope._securityQuestionSubmit(reset);
+                }
+
+                scope.verifyPassword = function (user) {
+
+                    scope._verifyPassword(user);
                 };
 
 
@@ -273,7 +385,25 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                 scope._resetPasswordRequest = function (requestDataObj) {
 
                     // Post request for password change and return promise
-                    return $http.post(DSP_URL + '/rest/user/password', requestDataObj);
+                    return $http.post(DSP_URL + '/rest/user/password?reset=true', requestDataObj);
+                };
+
+                scope._resetPasswordSQ = function (requestDataObj) {
+
+                    // Post request for password change and return promise
+                    return $http.post(DSP_URL + '/rest/user/password?login=false', requestDataObj);
+                };
+
+                // Test if our entered passwords are identical
+                scope._verifyPassword = function (userDataObj) {
+
+                    scope.identical = _dfStringService.areIdentical(userDataObj.new_password, userDataObj.verify_password);
+                };
+
+                // Test if our passwords are long enough
+                scope._verifyPasswordLength = function (credsDataObj) {
+
+                    return credsDataObj.new_password.length >= 5;
                 };
 
 
@@ -284,29 +414,78 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                     // this contains an object with the email address
                     requestDataObj['reset'] = true;
 
+                    // Turn on waiting directive
+                    scope.requestWaiting = true;
 
                     // Ask the DSP to resset the password via email confirmation
                     scope._resetPasswordRequest(requestDataObj).then(
 
                         // handle successful password reset
-                        function (data) {
+                        function (result) {
 
-                            // Emit a confirm message indicating that is the next step
-                            scope.$emit(scope.es.passwordResetRequestSuccess, requestDataObj.email);
+
+                            if (result.data.hasOwnProperty('security_question')) {
+
+
+                                scope.emailForm = false;
+                                scope.securityQuestionForm = true;
+
+
+                                scope.sq.email = requestDataObj.email;
+                                scope.sq.security_question = result.data.security_question
+
+                            }
+                            else {
+
+                                scope.successMsg = 'A password reset email has been sent to the provided email address.';
+
+                                // Emit a confirm message indicating that is the next step
+                                scope.$emit(scope.es.passwordResetRequestSuccess, requestDataObj.email);
+                            }
                         },
 
                         // handle error
                         function (reject) {
-                            // Throw a DreamFactory error object
-                            throw {
-                                module: 'DreamFactory User Management',
-                                type: 'error',
-                                provider: 'dreamfactory',
-                                exception: reject
-                            }
+
+                            scope.errorMsg = reject.data.error[0].message;
+                            return;
+
+                        }
+                    ).finally(
+                        function () {
+
+                            // turn off waiting directive
+                            scope.requestWaiting = false;
                         }
                     )
                 };
+
+
+                scope._securityQuestionSubmit = function (reset) {
+
+                    scope.questionWaiting = true;
+
+                    scope._resetPasswordSQ(reset).then(
+
+                        function (result) {
+
+                            var userCredsObj = {
+                                email: reset.email,
+                                password: reset.new_password
+                            }
+
+                            scope.$emit(UserEventsService.password.passwordSetSuccess, userCredsObj)
+
+                        },
+                        function (reject) {
+
+                            scope.questionWaiting = false;
+                            scope.errorMsg = reject.data.error[0].message;
+                            scope.$emit(UserEventsService.password.passwordSetError);
+                        }
+
+                    ).finally(function() {})
+                }
 
                 // WATCHERS AND INIT
 
@@ -330,17 +509,22 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
             link: function (scope, elem, attrs) {
 
 
+
+
+
             }
         }
     }])
 
-    .directive('dreamfactoryPasswordReset', ['MODUSRMNGR_ASSET_PATH', 'DSP_URL', '$http', 'UserEventsService', 'dfStringService', 'dfObjectService',
-        function (MODUSRMNGR_ASSET_PATH, DSP_URL, $http, UserEventsService, dfStringService, dfObjectService) {
+    // Password Reset Directive
+    .directive('dreamfactoryPasswordReset', ['MODUSRMNGR_ASSET_PATH', 'DSP_URL', '$http', 'UserEventsService', '_dfStringService', '_dfObjectService', 'dfNotify',
+        function (MODUSRMNGR_ASSET_PATH, DSP_URL, $http, UserEventsService, _dfStringService, _dfObjectService, dfNotify) {
 
             return {
                 restrict: 'E',
                 scope: {
-                    options: '=?'
+                    options: '=?',
+                    inErrorMsg: '=?'
                 },
                 templateUrl: MODUSRMNGR_ASSET_PATH + 'views/password-reset.html',
                 link: function (scope, elem, attrs) {
@@ -354,7 +538,7 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                     // This holds our options object.  If we don't provide an options object
                     // it defaults to showing the template.
                     var defaults = {showTemplate: true, login: false};
-                    scope.options = dfObjectService.mergeObjects(scope.options, defaults);
+                    scope.options = _dfObjectService.mergeObjects(scope.options, defaults);
 
                     // This is included on the top level tag of our directive template and
                     // controls whether the template is rendered or not.
@@ -363,15 +547,42 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                     // Holds value to for identical password check
                     scope.identical = true;
 
+                    scope.successMsg = '';
+                    scope.errorMsg = '';
+
+                    scope.resetWaiting = false;
+
+
+                    // PUBLIC API
+
+                    // I was lazy.  These two dismiss errors don't
+                    // follow the module pattern.
+                    // Public functions setting values directly
+                    scope.dismissError = function () {
+                        scope.errorMsg = '';
+                    }
+
+                    scope.dismissSuccess = function () {
+                        scope.successMsg = '';
+                    }
+
+
 
                     // PUBLIC API
                     scope.resetPassword = function (credsDataObj) {
 
-                        if (scope.identical) {
-                            scope._resetPassword(credsDataObj)
-                        } else {
-                            throw 'Passwords do not match.'
+                        if (!scope.identical) {
+                            scope.errorMsg = 'Passwords do not match.'
+                            return;
                         }
+
+                        if (!scope._verifyPasswordLength(credsDataObj)) {
+                            scope.errorMsg = 'Password must be at least 5 characters.'
+                            return;
+                        }
+
+
+                        scope._resetPassword(credsDataObj)
                     };
 
                     scope.verifyPassword = function (user) {
@@ -396,12 +607,20 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                     // Test if our entered passwords are identical
                     scope._verifyPassword = function (userDataObj) {
 
-                        scope.identical = dfStringService.areIdentical(userDataObj.new_password, userDataObj.verify_password);
+                        scope.identical = _dfStringService.areIdentical(userDataObj.new_password, userDataObj.verify_password);
+                    };
+
+                    // Test if our passwords are long enough
+                    scope._verifyPasswordLength = function (credsDataObj) {
+
+                        return credsDataObj.new_password.length >= 5;
                     };
 
 
                     // COMPLEX IMPLEMENTATION
                     scope._resetPassword = function (credsDataObj) {
+
+                        scope.resetWaiting = true;
 
                         var requestDataObj = {
                             email: credsDataObj.email,
@@ -412,24 +631,37 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                         scope._setPasswordRequest(requestDataObj).then(
                             function (result) {
 
-                                console.log(result);
-                                scope.$emit(scope.es.passwordSetSuccess)
+                                var userCredsObj = {
+                                    email: credsDataObj.email,
+                                    password: credsDataObj.new_password
+                                }
+
+                                scope.$emit(scope.es.passwordSetSuccess, userCredsObj);
+
+
                             },
                             function (reject) {
-                                // Throw a DreamFactory error object
-                                throw {
-                                    module: 'DreamFactory User Management',
-                                    type: 'error',
-                                    provider: 'dreamfactory',
-                                    exception: reject
-                                }
+
+                                scope.errorMsg = reject.data.error[0].message;
+                                scope.$emit(scope.es.passwordSetError);
+                                scope.resetWaiting = false;
                             }
-                        )
+                        ).finally (
+
+
+
+                            )
                     };
 
 
                     // WATCHERS AND INIT
 
+                    // WATCHERS AND INIT
+                    var watchInErrorMsg = scope.$watch('inErrorMsg', function (n, o) {
+
+                        scope.confirmWaiting = false;
+                        scope.errorMsg = n;
+                    });
 
                     //HANDLE MESSAGES
 
@@ -437,6 +669,11 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
 
                         scope._resetPassword(credsDataObj);
                     });
+
+                    scope.$on('$destroy', function (e) {
+
+                        watchInErrorMsg();
+                    })
                 }
             }
         }])
@@ -526,8 +763,8 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
         }])
 
     // Register Directive.  Takes care of registering a user for our application
-    .directive('dreamfactoryRegisterUser', ['MODUSRMNGR_ASSET_PATH', 'DSP_URL', '$http', '$rootScope', '$cookieStore', 'UserEventsService', 'dfStringService', 'dfObjectService', 'dfXHRHelper',
-        function (MODUSRMNGR_ASSET_PATH, DSP_URL, $http, $rootScope, $cookieStore, UserEventsService, dfStringService, dfObjectService, dfXHRHelper) {
+    .directive('dreamfactoryRegisterUser', ['MODUSRMNGR_ASSET_PATH', 'DSP_URL', '$http', '$rootScope', '$cookieStore', 'UserEventsService', '_dfStringService', '_dfObjectService', 'dfXHRHelper',
+        function (MODUSRMNGR_ASSET_PATH, DSP_URL, $http, $rootScope, $cookieStore, UserEventsService, _dfStringService, _dfObjectService, dfXHRHelper) {
 
 
             return {
@@ -548,7 +785,7 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                     // which can be set at the time of instantiation.  If it's not set then it will default
                     // to the DSP settings.
                     var defaults = {showTemplate: true, login: false};
-                    scope.options = dfObjectService.mergeObjects(scope.options, defaults);
+                    scope.options = _dfObjectService.mergeObjects(scope.options, defaults);
 
                     // This is included on the top level tag of our directive template and
                     // controls whether the template is rendered or not.
@@ -556,6 +793,17 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
 
                     // Holds value to for identical password check
                     scope.identical = true;
+
+                    scope.errorMsg = '';
+
+
+                    // I was lazy.  These two dismiss errors don't
+                    // follow the module pattern.
+                    // Public functions setting values directly
+                    scope.dismissError = function () {
+                        scope.errorMsg = '';
+                    }
+
 
                     // PUBLIC API ** See login directive for more info **
 
@@ -598,13 +846,18 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                     scope._register = function (registerDataObj) {
 
                         if (scope.identical != true) {
-                            // Throw an error
-                            throw {
-                                module: 'DreamFactory User Management',
-                                type: 'error',
-                                provider: 'dreamfactory',
-                                exception: 'Password and confirm password do not match.'
-                            }
+
+                            // Handle error in module
+                            scope.errorMsg = 'Password and confirm password do not match.';
+                            return;
+
+//                            // Throw an error
+//                            throw {
+//                                module: 'DreamFactory User Management',
+//                                type: 'error',
+//                                provider: 'dreamfactory',
+//                                exception: 'Password and confirm password do not match.'
+//                            }
                         }
 
 
@@ -648,13 +901,16 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                                 // error
                                 function (reject) {
 
+                                    // Handle error in module
+                                    scope.errorMsg = reject.data.error[0].message;
+
                                     // Throw an error
-                                    throw {
-                                        module: 'DreamFactory User Management',
-                                        type: 'error',
-                                        provider: 'dreamfactory',
-                                        exception: reject
-                                    }
+//                                    throw {
+//                                        module: 'DreamFactory User Management',
+//                                        type: 'error',
+//                                        provider: 'dreamfactory',
+//                                        exception: reject
+//                                    }
                                 });
                         };
 
@@ -717,7 +973,7 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                     // Test if our entered passwords are identical
                     scope._verifyPassword = function (userDataObj) {
 
-                        scope.identical = dfStringService.areIdentical(userDataObj.new_password, userDataObj.verify_password);
+                        scope.identical = _dfStringService.areIdentical(userDataObj.new_password, userDataObj.verify_password);
                     };
 
 
@@ -756,6 +1012,321 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
 
         }])
 
+    // User Profile Directive
+    .directive('dreamfactoryUserProfile', ['MODUSRMNGR_ASSET_PATH', '_dfObjectService', 'UserDataService', 'UserEventsService', function(MODUSRMNGR_ASSET_PATH, _dfObjectService, UserDataService, UserEventsService) {
+
+        return {
+
+            restrict: 'E',
+            replace: true,
+            templateUrl: MODUSRMNGR_ASSET_PATH + 'views/edit-profile.html',
+            scope: {
+                options: '=?'
+            },
+            link: function(scope, elem, attrs) {
+
+
+                scope.es = UserEventsService.profile;
+
+
+                var defaults = {showTemplate: true}
+                scope.options = _dfObjectService.mergeObjects(scope.options, defaults);
+
+
+
+
+
+
+            }
+        }
+    }])
+
+    // Remote Auth Providers Directive
+    .directive('dreamfactoryRemoteAuthProviders', ['MODUSRMNGR_ASSET_PATH', '_dfObjectService', 'UserDataService', 'UserEventsService', 'SystemConfigDataService',
+        function(MODUSRMNGR_ASSET_PATH, _dfObjectService, UserDataService, UserEventsService, SystemConfigDataService) {
+
+            return {
+
+                restrict: 'E',
+                replace: true,
+                templateUrl: MODUSRMNGR_ASSET_PATH + 'views/remote-auth-providers.html',
+                scope: false,
+                link: function(scope, elem, attrs) {
+
+
+                    // @TODO: Google Plus Provider name needs to be worked out on server so I don't have to change it on the client
+                    // @TODO: Fix providers {{client_id}} stuff
+
+
+                    scope.systemConfig = SystemConfigDataService.getSystemConfig();
+
+
+                    scope.providers = scope.systemConfig.remote_login_providers;
+
+
+                    scope.loginWithProvider = function (providerData) {
+
+                        scope._loginWithProvider(providerData);
+                    };
+
+
+                    scope._loginWithProvider = function (providerData) {
+
+                        window.top.location.href = '/web/remoteLogin?pid=' + providerData.api_name + '&return_url=' + encodeURI(window.top.location);
+                    }
+                }
+            }
+        }])
+
+    // Enter confirmation code page
+    .directive('dreamfactoryConfirmUser', ['MODUSRMNGR_ASSET_PATH', 'DSP_URL', '$http', '_dfObjectService', '_dfStringService', 'UserDataService', 'UserEventsService', 'SystemConfigDataService',
+        function(MODUSRMNGR_ASSET_PATH, DSP_URL, $http, _dfObjectService, _dfStringService, UserDataService, UserEventsService, SystemConfigDataService) {
+
+            return {
+
+                restrict: 'E',
+                replace: true,
+                templateUrl: MODUSRMNGR_ASSET_PATH + 'views/confirmation-code.html',
+                scope: {
+                    options: '=?',
+                    inErrorMsg: '=?'
+                },
+                link: function(scope, elem, attrs) {
+
+
+                    // PUBLIC VARS
+                    // This holds our options object.  If we don't provide an options object
+                    // it defaults to showing the template.  This is currently the only option
+                    var defaults = {showTemplate: true, title: 'User Confirmation'};
+
+                    scope.options = _dfObjectService.mergeObjects(scope.options, defaults);
+
+                    // This is included on the top level tag of our directive template and
+                    // controls whether the template is rendered or not.
+                    scope.showTemplate = scope.options.showTemplate;
+
+                    scope.identical = true;
+
+
+                    scope.errorMsg = '';
+                    scope.successMsg = '';
+                    scope.confirmWaiting = false;
+
+
+
+                    // I was lazy.  These two dismiss errors don't
+                    // follow the module pattern.
+                    // Public functions setting values directly
+                    scope.dismissError = function () {
+                        scope.errorMsg = '';
+                    };
+
+                    scope.dismissSuccess = function () {
+                        scope.successMsg = '';
+                    };
+
+
+
+                    // PUBLIC API
+                    scope.confirm = function (userConfirmObj) {
+
+                        if (!scope.identical) {
+                            scope.errorMsg = 'Passwords do not match.';
+                            return;
+                        }
+
+                        if (!scope._verifyPasswordLength(userConfirmObj)) {
+                            scope.errorMsg = 'Password must be at least 5 characters.';
+                            return;
+                        }
+
+
+
+                        scope._confirm(userConfirmObj);
+                    };
+
+                    scope.verifyPassword = function (user) {
+
+                        scope._verifyPassword(user);
+                    };
+
+
+
+                    // PRIVATE API
+                    // Test if our entered passwords are identical
+                    scope._verifyPassword = function (userDataObj) {
+
+                        scope.identical = _dfStringService.areIdentical(userDataObj.new_password, userDataObj.verify_password);
+                    };
+
+                    // Test if our passwords are long enough
+                    scope._verifyPasswordLength = function (user) {
+
+                        return user.new_password.length > 5;
+                    };
+
+                    // Send confim obj to the server for...you guessed it...confirmation
+                    scope._confirmUserToServer = function (requestDataObj) {
+
+                        return $http({
+                            url: DSP_URL + '/rest/user/register',
+                            method: 'POST',
+                            params: {
+                                login: false
+                            },
+                            data: requestDataObj
+                        });
+                    };
+
+
+
+                    // COMPLEX IMPLEMENTATION
+                    scope._confirm = function (userConfirmObj) {
+
+                        scope.confirmWaiting = true;
+
+                        var requestDataObj = userConfirmObj;
+
+                        scope._confirmUserToServer(requestDataObj).then(
+
+                            function (result) {
+
+                                var userCreds = {
+                                    email: requestDataObj.email,
+                                    password: requestDataObj.new_password
+                                }
+
+                                scope.$emit(UserEventsService.confirm.confirmationSuccess, userCreds)
+                            },
+                            function (reject) {
+
+                                scope.errorMsg = reject.data.error[0].message;
+                                scope.$emit(UserEventsService.confirm.confirmationError);
+
+                                // there was an error
+                                // stop the waiting directive
+                                scope.confirmWaiting = false;
+
+                            }
+                        ).finally(
+
+                            function () {
+
+                                // Do nothing..  We will have asked to login
+
+                            }
+                        )
+                    };
+
+
+
+                    // WATCHERS AND INIT
+                    var watchInErrorMsg = scope.$watch('inErrorMsg', function (n, o) {
+
+                        scope.confirmWaiting = false;
+                        scope.errorMsg = n;
+                    });
+
+
+                    // MESSAGES
+                    scope.$on('$destroy', function (e) {
+
+                        watchInErrorMsg();
+                    });
+
+                    scope.$on(scope.es.confirmationRequest, function (e, confirmationObj) {
+
+                        scope._confirm(confirmationObj);
+                    });
+
+
+
+                    // HELP
+
+
+
+                }
+            }
+        }])
+
+    // blockss entry forms while waiting for server
+    // pops up working icon
+    .directive('dreamfactoryWaiting', ['MODUSRMNGR_ASSET_PATH', function (MODUSRMNGR_ASSET_PATH) {
+
+
+        return {
+            restrict: 'E',
+            scope: {
+                show: '=?'
+            },
+            replace: false,
+            templateUrl: MODUSRMNGR_ASSET_PATH + 'views/dreamfactory-waiting.html',
+            link: function (scope, elem, attrs) {
+
+
+                var el = $(elem),
+                    container = el.children(),
+                    h = el.parent('.panel-body').outerHeight(),
+                    w = el.parent('.panel-body').outerWidth(),
+                    t = (el.position().top + parseInt(el.parent().css('padding-top'))) + 'px',
+                    l = (el.position().left + parseInt(el.parent().css('padding-left'))) + 'px';
+
+
+                function size() {
+
+                    h = el.parent('.panel-body').outerHeight();
+                    w = el.parent('.panel-body').outerWidth();
+                    t = el.parent('.panel-body').position().top;
+                    l = el.parent('.panel-body').position().left;
+
+                    container.css({
+                        height: h + 'px',
+                        width: w + 'px',
+                        position: 'absolute',
+                        left: l,
+                        top: t
+
+                    });
+
+                    container.children('.df-spinner').css({
+                        position: 'absolute',
+                        top: (h - 110) /2,
+                        left: (w - 70) /2
+                    });
+                }
+
+
+                scope._showWaiting = function() {
+
+                    size();
+                    container.fadeIn('fast');
+                };
+
+                scope._hideWaiting = function() {
+
+                    container.hide();
+                };
+
+                scope.$watch('show', function (n, o) {
+
+
+                    if (n) {
+                        scope._showWaiting()
+                    }
+                    else {
+                        scope._hideWaiting();
+                    }
+                });
+
+
+                $(window).on('resize load', function () {
+                    size();
+                })
+
+            }
+        }
+    }])
+
     // This service gives us a way to pass namespaced events around our application
     // We inject this service in order to request and respond to different module events.
     .service('UserEventsService', [function () {
@@ -782,7 +1353,16 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                 passwordResetRequest: 'user:passwordreset:request',
                 passwordResetRequestSuccess: 'user:passwordreset:requestsuccess',
                 passwordSetRequest: 'user:passwordset:request',
-                passwordSetSuccess: 'user:passwordset:success'
+                passwordSetSuccess: 'user:passwordset:success',
+                passwordSetError: 'user:passwordset:error'
+            },
+            profile: {
+
+            },
+            confirm: {
+                confirmationSuccess: 'user:confirmation:success',
+                confirmationError: 'user:confirmation:error',
+                confirmationRequest: 'user:confirmation:request'
             }
         }
     }])
@@ -790,7 +1370,7 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
     // This service gives us access to the current user.  While it's pretty sparse
     // at the moment it does give us access to critical user/session data.  Inject this
     // service where ever you need to access the current user.
-    .service('UserDataService', [function () {
+    .service('UserDataService', ['$http', 'DSP_URL', 'XHRHelper', function ($http, DSP_URL, XHRHelper) {
 
         // Stored user.
         var currentUser = false;
@@ -802,6 +1382,37 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
 
             return currentUser;
         }
+
+        function _saveUserSetting(userSettings) {
+
+            return $http({
+                url: DSP_URL + '/rest/user/custom',
+                method: 'POST',
+                data: userSettings
+            })
+        }
+
+        function _getUserSetting(setting, sync) {
+
+            setting = setting || '';
+            sync = sync || false;
+
+
+            if (sync) {
+                var requestDataObj = {
+                    url: 'user/custom/' + setting
+                };
+
+                return XHRHelper.ajax(requestDataObj);
+            }
+
+
+            return $http({
+                url: DSP_URL + '/rest/user/custom/' + setting,
+                method: 'GET'
+            })
+        }
+
 
         // set the current user
         function _setCurrentUser(userDataObj) {
@@ -821,7 +1432,6 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
             return !!currentUser;
         }
 
-
         return {
 
             // Public methods
@@ -832,6 +1442,17 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                 return _getCurrentUser();
             },
 
+            saveUserSetting: function (userSettings) {
+
+
+                return _saveUserSetting(userSettings);
+
+            },
+
+            getUserSetting: function (userSetting, sync) {
+
+                return _getUserSetting(userSetting, sync);
+            },
 
             setCurrentUser: function (userDataObj) {
 
@@ -849,7 +1470,7 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
             }
         }
     }])
-    .service('dfStringService', [function () {
+    .service('_dfStringService', [function () {
 
         return {
             areIdentical: function (stringA, stringB) {
@@ -883,7 +1504,7 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
         }
 
     }])
-    .service('dfObjectService', [function () {
+    .service('_dfObjectService', [function () {
 
         return {
 
@@ -952,7 +1573,7 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
             // Set additional headers
             for (var _key in _headersDataObj) {
 
-                xhr_obj.setRequestHeader(_key, _headersDataObj[_key]);
+                _xhrObj.setRequestHeader(_key, _headersDataObj[_key]);
             }
         }
 
