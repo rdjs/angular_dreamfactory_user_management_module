@@ -1234,11 +1234,10 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
                         watchInErrorMsg();
                     });
 
-                    scope.$on(scope.es.confirmationRequest, function (e, confirmationObj) {
+                    scope.$on(UserEventsService.confirm.confirmationRequest, function (e, confirmationObj) {
 
                         scope._confirm(confirmationObj);
                     });
-
 
 
                     // HELP
