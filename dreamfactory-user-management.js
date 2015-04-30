@@ -64,10 +64,7 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
 
                 // only allow as HTML tag
                 restrict: 'E',
-
-                // don't show directive tag
-                replace: true,
-
+                
                 // isolate scope
                 scope: {
 
@@ -252,7 +249,6 @@ angular.module('dfUserManagement', ['ngRoute', 'ngCookies'])
 
         return {
             restrict: 'E',
-            replace: true,
             scope: false,
             templateUrl: MODUSRMNGR_ASSET_PATH + 'views/fp-email-conf.html',
             link: function (scope, elem, attrs) {
