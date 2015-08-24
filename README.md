@@ -6,7 +6,7 @@ AngularJS module that authenticates and manages a single user for the DreamFacto
 
 ### Installation
 
-While your more that welcome to download and include the module yourself we find that it is easier to manage through Bower.  To install via bower simply type `bower install dreamfactory-user-management --save` in the command line at the root of your AngularJS project.  Be sure to include the module script in your index.html file as well as inject `dfUserManagement` into your app definition.
+While you're more than welcome to download and include the module yourself we find that it is easier to manage through Bower.  To install via bower simply type `bower install dreamfactory-user-management --save` in the command line at the root of your AngularJS project.  Be sure to include the module script in your index.html file as well as inject `dfUserManagement` into your app definition.
 
 
 ### Usage
